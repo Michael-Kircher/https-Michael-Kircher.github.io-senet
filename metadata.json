@@ -1,0 +1,6 @@
+{
+  "name": "Spiel von Senet",
+  "description": "Das klassische altägyptische Brettspiel Senet mit wunderschöner ägyptischer Ästhetik, historischen Regeln und künstlicher Intelligenz.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

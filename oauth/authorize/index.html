@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>OAuth Authorize — Senet</title>
+    <meta name="description" content="Statische Weiterleitungsseite für OAuth-Autorisierung (GitHub)" />
+    <style>
+      body{font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;line-height:1.5;margin:24px;background:#f7f3ec;color:#221a12}
+      main{max-width:760px;margin:auto;background:#fff;padding:20px;border-radius:10px;border:1px solid #e2d6bd}
+      label{display:block;margin-top:12px;font-weight:600}
+      input{width:100%;padding:8px;margin-top:6px;border:1px solid #ccc;border-radius:6px}
+      button{margin-top:12px;padding:10px 14px;border-radius:8px;border:none;background:#2f2312;color:#fff;cursor:pointer}
+      .note{font-size:0.95rem;color:#4b3b2a}
+      pre{background:#f4efe6;padding:10px;border-radius:6px;overflow:auto}
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>/oauth/authorize</h1>
+      <p class="note">Diese statische Seite leitet zur GitHub-OAuth-Autorisierungs-URL weiter. Sie führt keine Token-Exchanges durch — das muss serverseitig erfolgen.</p>
+
+      <form id="authForm">
+        <label for="client_id">Client ID (GitHub OAuth App)</label>
+        <input id="client_id" name="client_id" placeholder="z. B. gh_123456..." />
+
+        <label for="redirect_uri">Redirect URI (registriert bei der OAuth-App)</label>
+        <input id="redirect_uri" name="redirect_uri" placeholder="https://example.com/callback" />
+
+        <label for="scope">Scope (optional)</label>
+        <input id="scope" name="scope" placeholder="read:user user:email" />
+
+        <label for="state">State (optional; wird automatisch generiert, falls leer)</label>
+        <input id="state" name="state" placeholder="zufälliger String oder leer" />
+
+        <button type="button" id="go">Autorisieren (weiterleiten)</button>
+      </form>
+
+      <section aria-live="polite" style="margin-top:16px">
+        <p class="note">Schnellstart: Du kannst auch `?client_id=...&redirect_uri=...` an diese URL anhängen, dann leitet die Seite automatisch weiter.</p>
+        <div id="result" style="margin-top:8px"></div>
+      </section>
+
+      <hr />
+      <h3>Anmerkungen</h3>
+      <ul>
+        <li>GitHub Pages ist statisch und sicher — gehe niemals Geheimnisse (Client Secret) in statischen Seiten ein.</li>
+        <li>Der vollständige Token-Austausch muss von einem Backend übernommen werden.</li>
+        <li>Stelle sicher, dass die <em>Redirect URI</em> bei deiner GitHub OAuth-App eingetragen ist.</li>
+      </ul>
+    </main>
+
+    <script>
+      (function(){
+        const qs = Object.fromEntries(new URLSearchParams(location.search));
+        const clientInput = document.getElementById('client_id');
+        const redirectInput = document.getElementById('redirect_uri');
+        const scopeInput = document.getElementById('scope');
+        const stateInput = document.getElementById('state');
+        const go = document.getElementById('go');
+        const result = document.getElementById('result');
+
+        // Utility: generate a random state
+        function genState(len=32){
+          const a = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+          let s=''; for(let i=0;i<len;i++) s+=a.charAt(Math.floor(Math.random()*a.length));
+          return s;
+        }
+
+        // If query contains client_id and redirect_uri -> prefill and auto-redirect
+        if(qs.client_id) clientInput.value = qs.client_id;
+        if(qs.redirect_uri) redirectInput.value = qs.redirect_uri;
+        if(qs.scope) scopeInput.value = qs.scope;
+        if(qs.state) stateInput.value = qs.state;
+
+        function buildUrl(){
+          const client_id = clientInput.value.trim();
+          const redirect_uri = redirectInput.value.trim();
+          const scope = scopeInput.value.trim();
+          let state = stateInput.value.trim();
+
+          if(!client_id){ result.innerHTML = '<p style="color:#8a1a1a">Fehler: `client_id` ist erforderlich.</p>'; return null; }
+          if(!redirect_uri){ result.innerHTML = '<p style="color:#8a1a1a">Fehler: `redirect_uri` ist erforderlich.</p>'; return null; }
+          if(!state){ state = genState(); }
+
+          const params = new URLSearchParams({ client_id, redirect_uri, state });
+          if(scope) params.set('scope', scope);
+          // response_type is not required for GitHub; default is code
+          return 'https://github.com/login/oauth/authorize?'+params.toString();
+        }
+
+        function goRedirect(){
+          const url = buildUrl();
+          if(!url) return;
+          result.innerHTML = '<p>Weiterleitung zu:</p><pre>'+url+'</pre>';
+          // small delay to allow user to copy if wanted
+          setTimeout(()=>{ location.href = url; }, 700);
+        }
+
+        go.addEventListener('click', goRedirect);
+
+        // If both required params were present in query -> auto redirect
+        if(qs.client_id && qs.redirect_uri){
+          // slight delay so user sees prefill
+          setTimeout(goRedirect, 400);
+        }
+      })();
+    </script>
+  </body>
+</html>
